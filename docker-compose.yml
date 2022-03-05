@@ -17,7 +17,7 @@ services:
     restart: on-failure
       #environment:
       #overriding spring application.properties
-    #- keycloak-client.server-url=https://hostname:8443/auth # use host name or ip of the host machine
+    #- keycloak-client.server-url=https://hostname:8443/auth # use host name or ip of the host machine, enable only if you want your gateway to act as a client to keycloak
     depends_on:
       - eureka
     networks:
