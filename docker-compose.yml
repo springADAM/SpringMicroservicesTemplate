@@ -1,0 +1,98 @@
+version: '3.9'
+networks:
+  lclntwrk:
+    external: true
+volumes:
+  postgres_data:
+    name: keycloak_postgres_data
+    driver: local
+services:
+  apigateway:
+    container_name: api-gateway
+    build: ./api-gateway
+    image: api-gateway
+    ports:
+      - "80:8443"
+      - "443:8443"
+    restart: on-failure
+      #environment:
+      #overriding spring application.properties
+    #- keycloak-client.server-url=https://covaccini.westeurope.cloudapp.azure.com:8443/auth # use host name or ip of the host machine
+    depends_on:
+      - eureka
+    networks:
+      - lclntwrk
+  eureka:
+    container_name: eureka
+    build: ./eureka
+    image: eureka
+    ports:
+      - "8761:8761"
+    restart: on-failure
+    networks:
+      - lclntwrk
+  resource-server:
+    container_name: resource-server
+    build: ./resource-server
+    image: resource-server
+    ports:
+      - "8080" #makes container run on random docker port
+    restart: on-failure
+    environment:
+      #overriding spring application.properties
+      - eureka.client.serviceUrl.defaultZone=http://eureka:8761/eureka/
+      - keycloak-client.server-url=http://keycloak:8080/auth # use host name in production otherwise you'll be having different issuer matching problem
+      # also add <127.0.0.1 keycloak> to your /etc/hosts file to so that you can send code flow to your http:/keycloak:8080/auth/realms/myrealm/protocol/openid-connect/auth locally, or you'll be having the previous talked issue
+    depends_on:
+      - eureka
+      - keycloak
+    networks:
+      - lclntwrk
+  keycloak:
+    container_name: keycloak
+    image: quay.io/keycloak/keycloak:latest
+    environment:
+      DB_VENDOR: POSTGRES
+      DB_ADDR: userdb
+      DB_DATABASE: keycloak
+      DB_USER: keycloak
+      DB_SCHEMA: public
+      DB_PASSWORD: password
+      KEYCLOAK_HTTP_PORT: 8080
+      KEYCLOAK_HTTPS_PORT: 8443
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+      PROXY_ADDRESS_FORWARDING: "true" # needs to be enabled when put behind a gateway so that keycloak doesn't redirect inner links to keycloak:8080
+      # Uncomment the line below if you want to specify JDBC parameters. The parameter below is just an example, and it shouldn't be used in production without knowledge. It is highly recommended that you read the PostgreSQL JDBC driver documentation in order to use it.
+      #JDBC_PARAMS: "ssl=true"
+      #volumes:  enter path to certs here for keycloak, (can be ignored when put behind a gateway that runs on 443 port)
+      #- "/home/bendabizadam/project/certs/:/etc/x509/https"
+    ports:
+      - "8080:8080"
+      - "8443:8443"
+    depends_on:
+      - keycloakdb
+    networks:
+      - lclntwrk
+  keycloakdb:
+    container_name: keycloakdb
+    image: postgres
+    volumes:
+      - ./userdb:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    networks:
+      - lclntwrk
+  resourcedb:
+    container_name: resourcedb
+    image: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./resourcedb:/data/db
+  mongo-express:
+    image: mongo-express
+    ports:
+      - "8081:8081"

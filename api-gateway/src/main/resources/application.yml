@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      routes:
+        - id: resource-server
+          uri: lb://resource-service # should match your spring application name property not the docker service name
+          predicates:
+            - Path=/api/v1/**
+          filters:
+            - RemoveRequestHeader=Cookie
+        - id: keycloak-server
+          uri: http://keycloak:8080
+          predicates:
+            - Path=/auth/**
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://eureka:8761/eureka/
+  instance:
+    instance-id: ${spring.application.name}
+
+server:
+  port: 8443
+#  ssl: #generate keystore : openssl pkcs12 -export -in fullchain.pem -inkey privkey.pem -out keystore.p12 -name tomcat -CAfile chain.pem -caname root
+#    key-store: 'classpath:keystore.p12' #classpath:keystore.p12 if keystore file should be in classpath
+#    key-store-password: 'mypassword'
+#    keyStoreType: 'PKCS12'
+#    keyAlias: myproject
