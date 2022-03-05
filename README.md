@@ -1,5 +1,4 @@
 # SpringMicroservicesTemplate
-<H1>Spring Microservices Template</H1>
 
 this repo is a template that creates 3 essential project to for a microservices architecture with the following techs: 
  - Spring Boot
